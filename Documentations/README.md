@@ -926,8 +926,7 @@ an unsupported reservation status was not rejected as required.
 
 **Evidence placeholder:**
 
-> **[ADD EVIDENCE: Screenshot or terminal capture of the deliberately
-> modified code/commit. Do not expose unrelated secrets.]**
+![RED-RUN TERMINAL SCREENSHOT](image-2.png)
 
 ### Step 2 — Run the targeted test
 
@@ -946,17 +945,7 @@ Skipped: 0
 BUILD FAILURE
 ```
 
-**Evidence placeholder — REQUIRED:**
-
-> **[ADD RED-RUN TERMINAL SCREENSHOT HERE]**
->
-> The screenshot should clearly show:
-> - the exact Maven command
-> - the failing test name
-> - the failure/exception
-> - `Failures: 1`
-> - `BUILD FAILURE`
-
+![RED-RUN TERMINAL SCREENSHOT](image-2.png)
 ### Step 3 — Analyze the failure
 
 The failing test is used to identify the regression rather than treating the
