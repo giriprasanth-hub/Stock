@@ -714,4 +714,43 @@ void shouldRestoreStockWhenReservationExpires() {
     verify(reservationRepository)
             .save(reservation);
 }
+
+@Test
+void shouldRejectConfirmationForUnsupportedReservationStatus() {
+
+    Reservation reservation = mock(Reservation.class);
+    User user = mock(User.class);
+
+    when(reservationRepository.findById(1L))
+            .thenReturn(Optional.of(reservation));
+
+    when(userRepository.findByEmail("user@test.com"))
+            .thenReturn(Optional.of(user));
+
+    when(user.getRole())
+            .thenReturn(Role.USER);
+
+    when(reservation.getUser())
+            .thenReturn(user);
+
+    when(user.getEmail())
+            .thenReturn("user@test.com");
+
+    when(reservation.getStatus())
+            .thenReturn(null);
+
+    assertThrows(
+            BusinessRuleViolationException.class,
+            () -> reservationService.confirmReservation(
+                    1L,
+                    "user@test.com"
+            )
+    );
+
+    verify(reservation, never())
+            .setStatus(ReservationStatus.CONFIRMED);
+
+    verify(reservationRepository, never())
+            .save(reservation);
+}
 }

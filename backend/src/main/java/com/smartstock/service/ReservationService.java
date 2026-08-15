@@ -1,14 +1,9 @@
 package com.smartstock.service;
 
-import com.smartstock.dto.request.ReservationRequest;
-import com.smartstock.dto.response.ReservationResponse;
-import com.smartstock.entity.*;
-import com.smartstock.exception.BusinessRuleViolationException;
-import com.smartstock.exception.ResourceNotFoundException;
-import com.smartstock.repository.ProductRepository;
-import com.smartstock.repository.ReservationItemRepository;
-import com.smartstock.repository.ReservationRepository;
-import com.smartstock.repository.UserRepository;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,9 +14,20 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
+import com.smartstock.dto.request.ReservationRequest;
+import com.smartstock.dto.response.ReservationResponse;
+import com.smartstock.entity.Product;
+import com.smartstock.entity.Reservation;
+import com.smartstock.entity.ReservationItem;
+import com.smartstock.entity.ReservationStatus;
+import com.smartstock.entity.Role;
+import com.smartstock.entity.User;
+import com.smartstock.exception.BusinessRuleViolationException;
+import com.smartstock.exception.ResourceNotFoundException;
+import com.smartstock.repository.ProductRepository;
+import com.smartstock.repository.ReservationItemRepository;
+import com.smartstock.repository.ReservationRepository;
+import com.smartstock.repository.UserRepository;
 
 @Service
 public class ReservationService {
@@ -145,16 +151,49 @@ public class ReservationService {
             throw new BusinessRuleViolationException("Cannot confirm a cancelled reservation");
         }
 
-        if (reservation.getStatus() == ReservationStatus.EXPIRED
-                || reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
-            if (reservation.getStatus() == ReservationStatus.PENDING) {
-                // If it is expired but status wasn't updated yet, expire it and restore stock.
-                expireSingleReservationInternal(reservation);
-            }
-            throw new BusinessRuleViolationException("Cannot confirm an expired reservation");
-        }
+ ReservationStatus status = reservation.getStatus();
 
-        reservation.setStatus(ReservationStatus.CONFIRMED);
+// Cancelled reservation
+if (status == ReservationStatus.CANCELLED) {
+    throw new BusinessRuleViolationException(
+            "Cannot confirm a cancelled reservation"
+    );
+}
+
+// Invalid / unsupported status
+if (status == null) {
+    throw new BusinessRuleViolationException(
+            "Cannot confirm reservation with null status"
+    );
+}
+
+// Already expired
+if (status == ReservationStatus.EXPIRED) {
+    throw new BusinessRuleViolationException(
+            "Cannot confirm an expired reservation"
+    );
+}
+
+// Only PENDING reservations can be confirmed
+if (status != ReservationStatus.PENDING) {
+    throw new BusinessRuleViolationException(
+            "Cannot confirm reservation with status: " + status
+    );
+}
+
+// Now status is guaranteed to be PENDING,
+// so checking expiresAt is safe.
+if (reservation.getExpiresAt() != null
+        && reservation.getExpiresAt().isBefore(LocalDateTime.now())) {
+
+    expireSingleReservationInternal(reservation);
+
+    throw new BusinessRuleViolationException(
+            "Cannot confirm an expired reservation"
+    );
+}
+
+reservation.setStatus(ReservationStatus.CONFIRMED);
         reservation.setConfirmedAt(LocalDateTime.now());
         Reservation confirmed = reservationRepository.save(reservation);
 
